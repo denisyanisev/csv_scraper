@@ -1,24 +1,30 @@
 import pytest
-import json
-from run import scrape
+
+from contextlib import contextmanager
+from run import parse_args
+
+
+@contextmanager
+def does_not_raise():
+    yield
 
 
 @pytest.mark.parametrize(
-    'command, res',
+    'command,res,expected_raise',
     [
-        (['', 'date'], {'data': [{'date': '2021-11-23'}]}),
-        (['', 'date,campaign'], {'data': [{'date': '2021-11-23', 'campaign': 'facebook'}]})
-    ],
+        (
+                ([('--fields', 'date,campaign')], []), ['date', 'campaign'], does_not_raise()
+        ),
+        (
+                ([], []), [], pytest.raises(ValueError)
+        ),
+    ]
 )
-def test_scrape(command, res, mocker):
+def test_parse_args(command, res, expected_raise, mocker):
     mocker.patch(
         'getopt.getopt',
         return_value=command
     )
-    mocker.patch(
-        'run.fetch_results',
-        return_value=res
-    )
-
-    url = 'http://test-url'
-    assert json.loads(scrape(url)) == res
+    with expected_raise:
+        res1 = parse_args()
+        assert res1 == res
